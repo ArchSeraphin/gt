@@ -23,8 +23,7 @@ export default function ArticleEditor() {
 
   useEffect(() => {
     if (!isEdit) return;
-
-    const fetchArticle = async () => {
+    (async () => {
       try {
         const res = await fetch('/api/admin/articles', { credentials: 'include' });
         if (res.ok) {
@@ -36,60 +35,38 @@ export default function ArticleEditor() {
             setCoverImage(article.cover_image || '');
             setContent(article.content || '');
             setPublished(Boolean(article.published));
-          } else {
-            setError('Article introuvable');
-          }
+          } else { setError('Article introuvable'); }
         }
-      } catch {
-        setError('Erreur de chargement');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchArticle();
+      } catch { setError('Erreur de chargement'); }
+      finally { setLoading(false); }
+    })();
   }, [id, isEdit]);
 
   const uploadImage = async (file) => {
     const formData = new FormData();
-    formData.append('file', file);
-
-    const res = await fetch('/api/admin/upload', {
-      method: 'POST',
-      credentials: 'include',
-      body: formData
-    });
-
-    if (!res.ok) throw new Error('Erreur lors de l\'upload');
-    const data = await res.json();
-    return data.url;
+    formData.append('image', file);
+    const res = await fetch('/api/admin/upload', { method: 'POST', credentials: 'include', body: formData });
+    if (!res.ok) throw new Error('Erreur upload');
+    return (await res.json()).url;
   };
 
   const handleCoverUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
     setUploading(true);
-    try {
-      const url = await uploadImage(file);
-      setCoverImage(url);
-    } catch {
-      setError('Erreur lors de l\'upload de l\'image');
-    } finally {
-      setUploading(false);
-    }
+    try { setCoverImage(await uploadImage(file)); }
+    catch { setError('Erreur upload image'); }
+    finally { setUploading(false); }
   };
 
   const imageHandler = () => {
     const input = document.createElement('input');
-    input.setAttribute('type', 'file');
-    input.setAttribute('accept', 'image/*');
+    input.type = 'file';
+    input.accept = 'image/*';
     input.click();
-
     input.onchange = async () => {
       const file = input.files?.[0];
       if (!file) return;
-
       try {
         const url = await uploadImage(file);
         const quill = quillRef.current?.getEditor();
@@ -98,9 +75,7 @@ export default function ArticleEditor() {
           quill.insertEmbed(range.index, 'image', url);
           quill.setSelection(range.index + 1);
         }
-      } catch {
-        setError('Erreur lors de l\'upload de l\'image');
-      }
+      } catch { setError('Erreur upload image'); }
     };
   };
 
@@ -110,65 +85,32 @@ export default function ArticleEditor() {
         [{ header: [1, 2, 3, false] }],
         ['bold', 'italic', 'underline'],
         [{ list: 'ordered' }, { list: 'bullet' }],
-        ['link', 'image', 'blockquote', 'code-block']
+        ['link', 'image', 'blockquote']
       ],
-      handlers: {
-        image: imageHandler
-      }
+      handlers: { image: imageHandler }
     }
   }), []);
 
-  const formats = [
-    'header', 'bold', 'italic', 'underline',
-    'list', 'bullet', 'link', 'image', 'blockquote', 'code-block'
-  ];
+  const formats = ['header', 'bold', 'italic', 'underline', 'list', 'bullet', 'link', 'image', 'blockquote'];
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setSaving(true);
-
-    const sanitizedContent = DOMPurify.sanitize(content);
-
-    const payload = {
-      title,
-      excerpt,
-      cover_image: coverImage,
-      content: sanitizedContent,
-      published
-    };
-
     try {
-      const url = isEdit ? `/api/admin/articles/${id}` : '/api/admin/articles';
-      const method = isEdit ? 'PUT' : 'POST';
-
-      const res = await fetch(url, {
-        method,
+      const res = await fetch(isEdit ? `/api/admin/articles/${id}` : '/api/admin/articles', {
+        method: isEdit ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify(payload)
+        body: JSON.stringify({ title, excerpt, cover_image: coverImage, content: DOMPurify.sanitize(content), published })
       });
-
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || 'Erreur lors de la sauvegarde');
-      }
-
+      if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || 'Erreur sauvegarde');
       navigate('/admin/tableau-de-bord');
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setSaving(false);
-    }
+    } catch (err) { setError(err.message); }
+    finally { setSaving(false); }
   };
 
-  if (loading) {
-    return (
-      <AdminLayout>
-        <p className="admin-loading">Chargement...</p>
-      </AdminLayout>
-    );
-  }
+  if (loading) return <AdminLayout><div className="loading-screen"><div className="spinner" /></div></AdminLayout>;
 
   return (
     <AdminLayout>
@@ -176,83 +118,41 @@ export default function ArticleEditor() {
         <h1>{isEdit ? 'Modifier l\'article' : 'Nouvel article'}</h1>
       </div>
 
-      {error && <div className="admin-error">{error}</div>}
+      {error && <div className="alert alert--error">{error}</div>}
 
-      <form onSubmit={handleSubmit} className="admin-card admin-form">
-        <div className="admin-field">
-          <label htmlFor="title">Titre</label>
-          <input
-            id="title"
-            type="text"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            placeholder="Titre de l'article"
-            required
-          />
+      <form onSubmit={handleSubmit} className="admin-card">
+        <div className="form-group">
+          <label htmlFor="title" className="form-label">Titre</label>
+          <input id="title" type="text" className="form-input" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Titre de l'article" required />
         </div>
 
-        <div className="admin-field">
-          <label htmlFor="excerpt">Extrait</label>
-          <textarea
-            id="excerpt"
-            value={excerpt}
-            onChange={(e) => setExcerpt(e.target.value)}
-            placeholder="Court résumé de l'article"
-            rows={3}
-          />
+        <div className="form-group">
+          <label htmlFor="excerpt" className="form-label">Extrait</label>
+          <textarea id="excerpt" className="form-textarea" value={excerpt} onChange={(e) => setExcerpt(e.target.value)} placeholder="Court résumé" rows={3} />
         </div>
 
-        <div className="admin-field">
-          <label>Image de couverture</label>
-          <div className="admin-upload-area">
-            <input
-              type="file"
-              accept="image/*"
-              onChange={handleCoverUpload}
-              disabled={uploading}
-            />
-            {uploading && <span className="admin-uploading">Upload en cours...</span>}
-          </div>
-          {coverImage && (
-            <div className="admin-image-preview">
-              <img src={coverImage} alt="Couverture" />
-            </div>
-          )}
+        <div className="form-group">
+          <label className="form-label">Image de couverture</label>
+          <input type="file" accept="image/*" onChange={handleCoverUpload} disabled={uploading} />
+          {uploading && <p className="text-muted">Upload en cours...</p>}
+          {coverImage && <img src={coverImage} alt="Couverture" style={{ marginTop: '0.5rem', maxWidth: '300px', borderRadius: '8px' }} />}
         </div>
 
-        <div className="admin-field">
-          <label>Contenu</label>
-          <ReactQuill
-            ref={quillRef}
-            theme="snow"
-            value={content}
-            onChange={setContent}
-            modules={modules}
-            formats={formats}
-            placeholder="Rédigez votre article ici..."
-          />
+        <div className="form-group">
+          <label className="form-label">Contenu</label>
+          <ReactQuill ref={quillRef} theme="snow" value={content} onChange={setContent} modules={modules} formats={formats} placeholder="Rédigez votre article ici..." />
         </div>
 
-        <div className="admin-field admin-field-checkbox">
-          <label>
-            <input
-              type="checkbox"
-              checked={published}
-              onChange={(e) => setPublished(e.target.checked)}
-            />
-            Publié
-          </label>
+        <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <input type="checkbox" id="published" checked={published} onChange={(e) => setPublished(e.target.checked)} />
+          <label htmlFor="published" className="form-label" style={{ marginBottom: 0 }}>Publié</label>
         </div>
 
-        <div className="admin-form-actions">
-          <button type="submit" className="admin-btn admin-btn-primary" disabled={saving}>
+        <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1.5rem' }}>
+          <button type="submit" className="btn btn--primary" disabled={saving}>
             {saving ? 'Enregistrement...' : 'Enregistrer'}
           </button>
-          <button
-            type="button"
-            className="admin-btn admin-btn-outline"
-            onClick={() => navigate('/admin/tableau-de-bord')}
-          >
+          <button type="button" className="btn btn--outline" onClick={() => navigate('/admin/tableau-de-bord')}>
             Annuler
           </button>
         </div>

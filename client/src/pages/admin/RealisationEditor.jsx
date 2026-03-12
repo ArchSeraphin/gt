@@ -18,8 +18,7 @@ export default function RealisationEditor() {
 
   useEffect(() => {
     if (!isEdit) return;
-
-    const fetchRealisation = async () => {
+    (async () => {
       try {
         const res = await fetch('/api/admin/realisations', { credentials: 'include' });
         if (res.ok) {
@@ -27,91 +26,48 @@ export default function RealisationEditor() {
           const item = items.find((r) => String(r.id) === String(id));
           if (item) {
             setName(item.name || '');
-            setImageUrl(item.image_url || '');
+            setImageUrl(item.image || '');
             setText(item.text || '');
             setSortOrder(item.sort_order ?? 0);
-          } else {
-            setError('Réalisation introuvable');
-          }
+          } else { setError('Réalisation introuvable'); }
         }
-      } catch {
-        setError('Erreur de chargement');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchRealisation();
+      } catch { setError('Erreur de chargement'); }
+      finally { setLoading(false); }
+    })();
   }, [id, isEdit]);
 
   const handleImageUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
     setUploading(true);
     try {
       const formData = new FormData();
-      formData.append('file', file);
-
-      const res = await fetch('/api/admin/upload', {
-        method: 'POST',
-        credentials: 'include',
-        body: formData
-      });
-
-      if (!res.ok) throw new Error('Erreur lors de l\'upload');
-      const data = await res.json();
-      setImageUrl(data.url);
-    } catch {
-      setError('Erreur lors de l\'upload de l\'image');
-    } finally {
-      setUploading(false);
-    }
+      formData.append('image', file);
+      const res = await fetch('/api/admin/upload', { method: 'POST', credentials: 'include', body: formData });
+      if (!res.ok) throw new Error('Erreur upload');
+      setImageUrl((await res.json()).url);
+    } catch { setError('Erreur upload image'); }
+    finally { setUploading(false); }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setSaving(true);
-
-    const payload = {
-      name,
-      image_url: imageUrl,
-      text,
-      sort_order: Number(sortOrder)
-    };
-
     try {
-      const url = isEdit ? `/api/admin/realisations/${id}` : '/api/admin/realisations';
-      const method = isEdit ? 'PUT' : 'POST';
-
-      const res = await fetch(url, {
-        method,
+      const res = await fetch(isEdit ? `/api/admin/realisations/${id}` : '/api/admin/realisations', {
+        method: isEdit ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify(payload)
+        body: JSON.stringify({ name, image: imageUrl, text, sort_order: Number(sortOrder) })
       });
-
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || 'Erreur lors de la sauvegarde');
-      }
-
+      if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || 'Erreur sauvegarde');
       navigate('/admin/tableau-de-bord');
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setSaving(false);
-    }
+    } catch (err) { setError(err.message); }
+    finally { setSaving(false); }
   };
 
-  if (loading) {
-    return (
-      <AdminLayout>
-        <p className="admin-loading">Chargement...</p>
-      </AdminLayout>
-    );
-  }
+  if (loading) return <AdminLayout><div className="loading-screen"><div className="spinner" /></div></AdminLayout>;
 
   return (
     <AdminLayout>
@@ -119,70 +75,36 @@ export default function RealisationEditor() {
         <h1>{isEdit ? 'Modifier la réalisation' : 'Nouvelle réalisation'}</h1>
       </div>
 
-      {error && <div className="admin-error">{error}</div>}
+      {error && <div className="alert alert--error">{error}</div>}
 
-      <form onSubmit={handleSubmit} className="admin-card admin-form">
-        <div className="admin-field">
-          <label htmlFor="name">Nom</label>
-          <input
-            id="name"
-            type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="Nom de la réalisation"
-            required
-          />
+      <form onSubmit={handleSubmit} className="admin-card">
+        <div className="form-group">
+          <label htmlFor="name" className="form-label">Nom</label>
+          <input id="name" type="text" className="form-input" value={name} onChange={(e) => setName(e.target.value)} placeholder="Nom de la réalisation" required />
         </div>
 
-        <div className="admin-field">
-          <label>Image</label>
-          <div className="admin-upload-area">
-            <input
-              type="file"
-              accept="image/*"
-              onChange={handleImageUpload}
-              disabled={uploading}
-            />
-            {uploading && <span className="admin-uploading">Upload en cours...</span>}
-          </div>
-          {imageUrl && (
-            <div className="admin-image-preview">
-              <img src={imageUrl} alt={name} />
-            </div>
-          )}
+        <div className="form-group">
+          <label className="form-label">Image</label>
+          <input type="file" accept="image/*" onChange={handleImageUpload} disabled={uploading} />
+          {uploading && <p className="text-muted">Upload en cours...</p>}
+          {imageUrl && <img src={imageUrl} alt={name} style={{ marginTop: '0.5rem', maxWidth: '300px', borderRadius: '8px' }} />}
         </div>
 
-        <div className="admin-field">
-          <label htmlFor="text">Texte</label>
-          <textarea
-            id="text"
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            placeholder="Description de la réalisation"
-            rows={6}
-          />
+        <div className="form-group">
+          <label htmlFor="text" className="form-label">Description</label>
+          <textarea id="text" className="form-textarea" value={text} onChange={(e) => setText(e.target.value)} placeholder="Description de la réalisation" rows={6} />
         </div>
 
-        <div className="admin-field">
-          <label htmlFor="sort_order">Ordre</label>
-          <input
-            id="sort_order"
-            type="number"
-            value={sortOrder}
-            onChange={(e) => setSortOrder(e.target.value)}
-            min={0}
-          />
+        <div className="form-group">
+          <label htmlFor="sort_order" className="form-label">Ordre d'affichage</label>
+          <input id="sort_order" type="number" className="form-input" value={sortOrder} onChange={(e) => setSortOrder(e.target.value)} min={0} style={{ maxWidth: '120px' }} />
         </div>
 
-        <div className="admin-form-actions">
-          <button type="submit" className="admin-btn admin-btn-primary" disabled={saving}>
+        <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1.5rem' }}>
+          <button type="submit" className="btn btn--primary" disabled={saving}>
             {saving ? 'Enregistrement...' : 'Enregistrer'}
           </button>
-          <button
-            type="button"
-            className="admin-btn admin-btn-outline"
-            onClick={() => navigate('/admin/tableau-de-bord')}
-          >
+          <button type="button" className="btn btn--outline" onClick={() => navigate('/admin/tableau-de-bord')}>
             Annuler
           </button>
         </div>

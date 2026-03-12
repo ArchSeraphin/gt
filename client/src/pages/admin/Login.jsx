@@ -37,21 +37,20 @@ export default function Login() {
   }
 
   return (
-    <div className="admin-login-page">
-      <div className="admin-login-card">
-        <div className="admin-login-logo">
-          <h1>G&T Paysage</h1>
-          <p>Espace administration</p>
-        </div>
+    <div className="login-page">
+      <div className="login-card">
+        <h1>G&amp;T Paysage</h1>
+        <p className="text-center text-muted" style={{ marginBottom: '2rem' }}>Espace administration</p>
 
-        {error && <div className="admin-error">{error}</div>}
+        {error && <div className="alert alert--error">{error}</div>}
 
         <form onSubmit={handleSubmit}>
-          <div className="admin-field">
-            <label htmlFor="email">Email</label>
+          <div className="form-group">
+            <label htmlFor="email" className="form-label">Email</label>
             <input
               id="email"
               type="email"
+              className="form-input"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="admin@gtpaysage38.fr"
@@ -60,11 +59,12 @@ export default function Login() {
             />
           </div>
 
-          <div className="admin-field">
-            <label htmlFor="password">Mot de passe</label>
+          <div className="form-group">
+            <label htmlFor="password" className="form-label">Mot de passe</label>
             <input
               id="password"
               type="password"
+              className="form-input"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Mot de passe"
@@ -73,7 +73,7 @@ export default function Login() {
             />
           </div>
 
-          <button type="submit" className="admin-btn admin-btn-primary" disabled={submitting}>
+          <button type="submit" className="btn btn--primary btn--full" disabled={submitting}>
             {submitting ? 'Connexion...' : 'Se connecter'}
           </button>
         </form>

@@ -27,48 +27,50 @@ export default function Header() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, [handleScroll]);
 
+  // Lock body scroll when mobile menu is open
+  useEffect(() => {
+    document.body.style.overflow = menuOpen ? 'hidden' : '';
+    return () => { document.body.style.overflow = ''; };
+  }, [menuOpen]);
+
   const closeMenu = () => setMenuOpen(false);
 
-  const solid = !isHome || scrolled;
+  const solid = !isHome || scrolled || menuOpen;
 
   return (
-    <header className={`header header--fixed${solid ? ' header--solid' : ' header--transparent'}${menuOpen ? ' header--menu-open' : ''}`}>
-      <div className="header__inner container">
+    <header className={`header ${solid ? 'header--solid' : 'header--transparent'}`}>
+      <div className="header__inner">
         <Link to="/" className="header__logo" onClick={closeMenu}>
-          <img src="/img/logo/logo.png" alt="G&T Paysage" className="header__logo-img" />
+          <img src="/img/logo/logo.png" alt="G&T Paysage" />
           <span className="header__logo-text">G&amp;T Paysage</span>
         </Link>
 
-        <nav className={`header__nav${menuOpen ? ' header__nav--open' : ''}`}>
-          <ul className="header__nav-list">
-            {NAV_LINKS.map(({ to, label }) => (
-              <li key={to} className="header__nav-item">
-                <Link
-                  to={to}
-                  className={`header__nav-link${pathname === to ? ' header__nav-link--active' : ''}`}
-                  onClick={closeMenu}
-                >
-                  {label}
-                </Link>
-              </li>
-            ))}
-          </ul>
-
-          <Link to="/contact" className="btn btn--primary header__cta" onClick={closeMenu}>
-            Contactez-nous
+        <nav className={`nav${menuOpen ? ' nav--open' : ''}`}>
+          {NAV_LINKS.map(({ to, label }) => (
+            <Link
+              key={to}
+              to={to}
+              className={`nav__link${pathname === to ? ' nav__link--active' : ''}`}
+              onClick={closeMenu}
+            >
+              {label}
+            </Link>
+          ))}
+          <Link to="/contact" className="btn btn--accent btn--sm nav__cta" onClick={closeMenu}>
+            Devis gratuit
           </Link>
         </nav>
 
         <button
           type="button"
-          className={`header__hamburger${menuOpen ? ' header__hamburger--open' : ''}`}
+          className={`hamburger${menuOpen ? ' hamburger--open' : ''}`}
           aria-label="Menu"
           aria-expanded={menuOpen}
           onClick={() => setMenuOpen((prev) => !prev)}
         >
-          <span className="header__hamburger-line" />
-          <span className="header__hamburger-line" />
-          <span className="header__hamburger-line" />
+          <span className="hamburger__line" />
+          <span className="hamburger__line" />
+          <span className="hamburger__line" />
         </button>
       </div>
     </header>

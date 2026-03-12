@@ -13,11 +13,11 @@ export default function AdminLayout({ children }) {
   return (
     <div className="admin-layout">
       <aside className="admin-sidebar">
-        <div className="admin-sidebar-header">
-          <span className="admin-logo">G&T Paysage</span>
+        <div className="admin-sidebar__logo">
+          G&amp;T Paysage
         </div>
 
-        <nav className="admin-nav">
+        <nav className="admin-sidebar__nav">
           <NavLink to="/admin/tableau-de-bord" end>
             &#x25A6; Tableau de bord
           </NavLink>
@@ -30,13 +30,10 @@ export default function AdminLayout({ children }) {
           <NavLink to="/admin/analytics">
             &#x25C8; Analytics
           </NavLink>
-        </nav>
-
-        <div className="admin-sidebar-footer">
-          <button className="admin-logout-btn" onClick={handleLogout}>
+          <button onClick={handleLogout} style={{ width: '100%', textAlign: 'left', marginTop: 'auto' }}>
             &#x2192; Déconnexion
           </button>
-        </div>
+        </nav>
       </aside>
 
       <main className="admin-main">
